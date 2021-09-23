@@ -63,9 +63,7 @@ def sender(u_id, text, dop_id = None):
         else:
             vk_session.method('messages.send', {'user_id' : u_id, 'message' : '💩Прости чел я еще не умею отправлять такое(((', 'random_id' : get_random_id() })
 
-def is_connect(u_id):
-    u_id_str = str(u_id)
-    return users[u_id_str]['connect'] != False\
+
 
 
 #Блок "системных" переменных
