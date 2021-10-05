@@ -63,6 +63,27 @@ def sender(u_id, text, dop_id = None):
         else:
             vk_session.method('messages.send', {'user_id' : u_id, 'message' : '💩Прости чел я еще не умею отправлять такое(((', 'random_id' : get_random_id() })
 
+def fight(player1, player2):
+    players = [player1, player2]
+    
+    num = random.randint(0, 1)
+    winner = players[num]
+    loser = players[1-num]
+    
+    sender(player1.player_id, 'Смотрите, эти кабаны пиздятся!')
+    sender(player2.player_id, 'Смотрите, эти кабаны пиздятся!')
+    
+    fight_img_path = sys.path[0]+ '\\img\\event\\fight.jpg'
+    
+    send_photo(session_api, player1.player_id, *upload_photo(upload, fight_img_path))
+    send_photo(session_api, player2.player_id, *upload_photo(upload, fight_img_path))
+    
+    
+    sender(player1.player_id, '☠🐗' + winner.name + ' надрал жопу кабану ' + loser.name)
+    sender(player2.player_id, '☠🐗' + winner.name + ' надрал жопу кабану ' + loser.name)
+    
+    player1.event_passed()
+    player2.event_passed()
 
 
 
@@ -115,7 +136,7 @@ for event in longpoll.listen():
                 if bd_ans is None:
                     
                     default_prop = {'connect': False, 'img': None, 'name': None, 'level': 1, 'points': 0, 'inventory': {}, 'location': ''} # Свойста игрока по умолчанию
-                    users[u_id_str] = Player(user_id, default_prop)
+                    users[u_id_str] = Player(u_id, default_prop)
                     player = users[u_id_str] # объект игрока
                     
                     #Процесс регистрации:
@@ -125,10 +146,12 @@ for event in longpoll.listen():
                     
                     player.img = pig_img_path
                     
-                    sender(u_id, 'Теперь это твой личный кабанчик. Заботься о нем!')
-                    send_photo(session_api, u_id, *upload_photo(upload, pig_img_path))
-                    player.name = -1 # процесс регистрации имени
-                    sender(u_id, 'Придумай своему кабанчику имя:')
+                    sender(player.player_id, 'Добро пожаловать в КбаноБота!')
+                    sender(player.player_id, 'Теперь это твой личный кабанчик. Заботься о нем!')
+                    send_photo(session_api, player.player_id, *upload_photo(upload, pig_img_path))
+                    
+                    player.sys_event = 'name' # процесс регистрации имени
+                    sender(player.player_id, 'Придумай своему кабанчику имя:')
                     
                     obj = player.return_prop_str() # объект игрока
                     cursor.execute("INSERT INTO users VALUES (?, ?)", (u_id_str, obj))
@@ -139,8 +162,8 @@ for event in longpoll.listen():
                     users[u_id_str] = Player(u_id, ast.literal_eval(bd_ans[0])) # загрузка объекта игрока из бд
                     player = users[u_id_str] # объект игрока
                     
-                    sender(u_id, 'С возвращением, ' + player.name)
-                    send_photo(session_api, u_id, *upload_photo(upload, player.img))
+                    sender(player.player_id, 'С возвращением, ' + player.name)
+                    send_photo(session_api, player.player_id, *upload_photo(upload, player.img))
                     #send_photo(session_api, u_id, *upload_photo_url(upload, photo_url)) # отправка валеры
                 continue
             else:
@@ -150,7 +173,7 @@ for event in longpoll.listen():
             
             if player.is_connect():
                 companion_id = player.companion()
-                companion = users[companion_id] # Объект собеседника
+                companion = users[str(companion_id)] # Объект собеседника
             
             
             # Блок обработки сообщения
@@ -158,8 +181,11 @@ for event in longpoll.listen():
                 
                 if player.is_connect(): #(users[str(u_id)]['connect'] != False): # 
                     companion.disconnect()
-                    sender(companin.player_id '😭Кабанчик отключился. Напишите /find чтобы найти нового чепушилу')
+                    sender(companion.player_id, '😭Кабанчик отключился. Напишите /find чтобы найти нового чепушилу')
                     player.disconnect()
+                    
+                    companion.event_passed()
+                    player.event_passed()
                 
                 sender(player.player_id, '🔎Ищу бойчика...')
                 sender(player.player_id, 'Сейчас хотят тебя: ' + str(len(free_users)))
@@ -167,6 +193,21 @@ for event in longpoll.listen():
                 
                 if not(player.player_id in free_users):
                     free_users.append(player.player_id)
+                    
+            elif msg == '/fight':
+                if player.is_connect() and player.sys_event == 'none':
+                    player.sys_event = '1fight'
+                    companion.sys_event = '2fight'
+                    
+                    sender(player.player_id, '☠🐗 Ты вызвал на дуэль кабана: ' + companion.name)
+                    sender(companion.player_id, '☠🐗 Вас вызвал на дуэль кабан: ' + player.name + '.\nДуэль: Принять/Отклонить?')
+                    
+                    
+                    
+                elif player.sys_event != 'none':
+                    sender(player.player_id, 'Ты уже что-то собрался делать...')
+                else:
+                    sender(player.player_id, 'С кем драться собрался, мать!')
                    
             #Админ команды
             # ----------------------------------------------------
@@ -175,7 +216,7 @@ for event in longpoll.listen():
                 sender(player.player_id, 'Ждут: '+str(free_users))
             elif msg == '/close': # отключение бота
                 for user in users:
-                    sender(int(user), '🦍Валера ушел пить пиво и пернул на прощание')
+                    sender(int(user), '🦍КабаноБот закрылся на технические работы.')
                     player_obj = users[user]
                     if player_obj.changes: # Если были изменены свойства объекта игрока
                         update_player(player)
@@ -183,16 +224,31 @@ for event in longpoll.listen():
             # ----------------------------------------------------
             
             else:
+                #обработка событий
+                if player.sys_event != 'none':
+                    if player.sys_event == 'name':#Установка имени кабана
+                        player.name = msg
+                        sender(player.player_id, 'Поздвравляем! Теперь твоего красавца зовут ' + msg)
+                        #player.have_change()
+                        update_player(player)
+                        #send_photo(session_api, u_id, *upload_photo(upload, users[u_id_str]['img']))
+                        player.event_passed()
+                        
+                    elif player.sys_event == '2fight':
+                        if msg == 'Принять':
+                            fight(player, companion)
+                        elif msg == 'Отклонить':
+                            sender(companion.player_id, player.name + ' не хочет драться.')
+                            sender(player.player_id, 'Вы отклонили дуэль.')
+                            
+                            companion.event_passed()
+                            player.event_passed()
+                            
+                         
+                
                 #общение с другим кабаном
-                if player.is_connect(): #(users[str(u_id)]['connect'] != False): # проверка подключения
-                    sender(companin.player_id , companion.name + ': ' + msg, player.player_id)
-                    
-                #Установка имени кабана
-                elif player.name == -1
-                    player.name = msg
-                    update_pig(player)
-                    sender(player.player_id, 'Поздвравляю!!! Теперь твоего красавца зовут ' + msg)
-                    #send_photo(session_api, u_id, *upload_photo(upload, users[u_id_str]['img']))
+                elif player.is_connect(): #(users[str(u_id)]['connect'] != False): # проверка подключения
+                    sender(companion.player_id , companion.name + ': ' + msg, player.player_id)                    
                 else:
                     sender(u_id, '💞Сладенький, твои сообщения не доходят.\n \
                     😖Если не хочешь повстречаться с моим зеленым змеем напиши /find и найди бойчика себе по силам.\n \

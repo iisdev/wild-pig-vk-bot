@@ -1,0 +1,25 @@
+-lib block
+-func block
+
+-sys var block
+-global var block
+
+-db init block
+
+-while:
+	-msg event
+	-reg/con new user block
+	
+	-user msg check
+	-admin commands
+	-send msg
+	
+	-con free users
+	
+
+
+------
+sys event's types:
+	- none
+	- 1fight - active
+	- 2fight - passive
