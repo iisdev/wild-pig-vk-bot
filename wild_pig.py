@@ -103,6 +103,9 @@ users = {}#{'340297072': \
         #            { 'name': 'Лёнчик', 'level': 1, 'health': 3, 'inventory': [] } }}
 free_users = []
 IMG_PATH = 'D:\\Code\\vkbot\\img\\pigs\\'
+
+EVENT_ACCEPT = 'Принять'
+EVENT_REJECT = 'Отклонить'
 #------------------------------
 
 
@@ -135,7 +138,9 @@ for event in longpoll.listen():
                 
                 if bd_ans is None:
                     
-                    default_prop = {'connect': False, 'img': None, 'name': None, 'level': 1, 'points': 0, 'inventory': {'Бебра': 3}, 'location': '', 'other': {}} # Свойста игрока по умолчанию
+                    default_prop = {'connect': False, 'img': None, 'name': None, 'level': 1, 'points': 0, \
+                                                    'inventory': {'Бебра': 3}, 'location': '', 'other': {'money': 100}} # Свойста игрока по умолчанию
+                                                    
                     users[u_id_str] = Player(u_id, default_prop)
                     player = users[u_id_str] # объект игрока
                     
@@ -225,9 +230,8 @@ for event in longpoll.listen():
                     sender(player.player_id, 'С кем драться собрался, мать!')
             elif msg == '/trade':
                 if player.is_connect() and player.sys_event == 'none':
-                    player.sys_event = 'trade'
-                    
-                    
+                    player.sys_event = 'trade_offer1'
+                    sender(player.player_id, 'Что ты хочешь предложить? Перечисли через пробел:')
                 elif player.sys_event != 'none':
                     sender(player.player_id, 'Ты уже что-то собрался делать...')
                 else:
@@ -259,17 +263,79 @@ for event in longpoll.listen():
                         #send_photo(session_api, u_id, *upload_photo(upload, users[u_id_str]['img']))
                         player.event_passed()
                         
+                        
+                    #   FIGHT    
                     elif player.sys_event == '2fight':
-                        if msg == 'Принять':
+                        if msg == EVENT_ACCEPT:
                             fight(player, companion)
-                        elif msg == 'Отклонить':
+                        elif msg == EVENT_REJECT:
                             sender(companion.player_id, player.name + ' не хочет драться.')
                             sender(player.player_id, 'Вы отклонили дуэль.')
                             
                             companion.event_passed()
                             player.event_passed()
                             
-                         
+                    #   TRADE
+                    elif player.sys_event == 'trade_offer1': # предложение обмена
+                        items = msg.split()
+                        for item in items: # заполнение буффера
+                            if player.have_item(item):
+                                player.delete_item(item)
+                                player.trade_buff.append(item)
+                            else:
+                                sender(player.player_id, 'У тебя нету вещи: ' + item)
+                        if player.trade_buff != []:
+                            t_buff = ', '.join(player.trade_buff)
+                            sender(companion.player_id, player.name + ' предложил вам вещи: ' + t_buff + '. Согласны на обмен? ' + EVENT_ACCEPT + '/' + EVENT_REJECT)
+                            
+                            companion.sys_event = 'trade_accept1'
+                            player.sys_event = 'trade_offer_wait'
+                        else:
+                            sender(player.player_id, 'Ты ничего не предложил...')
+                            player.event_passed()
+                            
+                    elif player.sys_event == 'trade_accept1': #Решение 2-й стороны
+                        if msg == EVENT_ACCEPT:
+                            player.sys_event = 'trade_accept2'
+                            sender(player.player_id, 'Что ты хочешь предложить? Перечисли через пробел:')
+                        elif msg == EVENT_REJECT:
+                            sender(player.player_id, 'Вы отклонили обмен.')
+                            sender(companion.player_id, player.name + ' отклонил предложение об обмене.')
+                            
+                            player.event_passed()
+                            companion.event_passed()
+                            
+                    elif companion.sys_event == 'trade_accept2': # 3-й этап - решение предложающего
+                        t_buff = ', '.join(companion.trade_buff)
+                        sender(player.player_id, companion.name + ' предложил вам вещи: ' + t_buff + '. Согласны на обмен? ' + EVENT_ACCEPT + '/' + EVENT_REJECT)
+                        
+                        player.sys_event = 'trade_offer2'
+                        companion.sys_event = 'trade_accept_wait' # для избежания спама
+                    
+                    elif player.sys_event == 'trade_offer2':
+                        if msg == EVENT_ACCEPT: # обмен вещами через буфера
+                            for item_idx in len(player.trade_buff):
+                                item = player.trade_buff[item_idx]
+                                player.trade_buff.pop(item_idx) # delete item from buffer
+                                companion.get_item(item)
+                            
+                            for item_idx in len(companion.trade_buff):
+                                item = companion.trade_buff[item_idx]
+                                companion.trade_buff.pop(item_idx)
+                                player.get_item(item)
+                        
+                            sender(player.player_id, '🤝🏻Совершилась деловая сделка.')
+                            sender(companion.player_id, '🤝🏻Совершилась деловая сделка.')
+                            
+                            player.event_passed()
+                            companion.event_passed()
+                            
+                        elif msg == EVENT_REJECT:
+                            sender(player.player_id, 'Вы отклонили обмен.')
+                            sender(companion.player_id, player.name + ' отклонил предложение об обмене.')
+                            
+                            player.event_passed()
+                            companion.event_passed()
                 
                 #общение с другим кабаном
                 elif player.is_connect(): #(users[str(u_id)]['connect'] != False): # проверка подключения

@@ -45,6 +45,8 @@ class Player:
     def event_passed(self):
         self.sys_event = 'none'
     
+     # INVENTORY
+    
     def return_inventory(self):
         inv = "Твой инвентарь:"
         if len(self.inventory) == 0:
@@ -62,6 +64,9 @@ class Player:
             weight += items[item]
         
         return weight
+    
+    def have_item(self, item):
+        return item in self.inventory
     
     def delete_item(self, item):
         items = self.inventory
@@ -88,6 +93,6 @@ class Player:
             items[item] = 1
         return (True,)
     
-    
+    # TRADE_BUFFER
         
     

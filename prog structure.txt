@@ -12,6 +12,12 @@
 	
 	-user msg check
 	-admin commands
+	
+	-events check:
+		-name
+		-figth
+		-trade
+	
 	-send msg
 	
 	-con free users
@@ -24,3 +30,9 @@ sys event's types:
 	- 1fight - active
 	- 2fight - passive
 	
+	-trade_offer1
+	-trade_offer2
+	-trade_accept1
+	-trade_accept2
+	-trade_offer_wait
+	-trade_accept_wait
