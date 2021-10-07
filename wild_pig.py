@@ -135,7 +135,7 @@ for event in longpoll.listen():
                 
                 if bd_ans is None:
                     
-                    default_prop = {'connect': False, 'img': None, 'name': None, 'level': 1, 'points': 0, 'inventory': {}, 'location': ''} # Свойста игрока по умолчанию
+                    default_prop = {'connect': False, 'img': None, 'name': None, 'level': 1, 'points': 0, 'inventory': {'Бебра': 3}, 'location': '', 'other': {}} # Свойста игрока по умолчанию
                     users[u_id_str] = Player(u_id, default_prop)
                     player = users[u_id_str] # объект игрока
                     
@@ -177,6 +177,7 @@ for event in longpoll.listen():
             
             
             # Блок обработки сообщения
+                #Общие команды
             if msg == '/find': # Поиск собеседника
                 
                 if player.is_connect(): #(users[str(u_id)]['connect'] != False): # 
@@ -193,7 +194,21 @@ for event in longpoll.listen():
                 
                 if not(player.player_id in free_users):
                     free_users.append(player.player_id)
-                    
+            
+            elif msg == '/inv':
+                inv_msg = player.return_inventory()
+                sender(player.player_id, inv_msg)
+            elif msg[:4] == '/del':
+                item = msg[5:]
+                if player.delete_item(item):
+                    sender(player.player_id, 'Ты выкинул вещь: ' + item)
+                else:
+                    sender(player.player_id, 'У тебя нет такой вещи.')
+            elif msg == '/get':
+                item_log = player.get_item('Бебра')
+                if not item_log[0]:
+                    sender(player.player_id, item_log[1])
+                #Команды в диалоге
             elif msg == '/fight':
                 if player.is_connect() and player.sys_event == 'none':
                     player.sys_event = '1fight'
@@ -208,6 +223,16 @@ for event in longpoll.listen():
                     sender(player.player_id, 'Ты уже что-то собрался делать...')
                 else:
                     sender(player.player_id, 'С кем драться собрался, мать!')
+            elif msg == '/trade':
+                if player.is_connect() and player.sys_event == 'none':
+                    player.sys_event = 'trade'
+                    
+                    
+                elif player.sys_event != 'none':
+                    sender(player.player_id, 'Ты уже что-то собрался делать...')
+                else:
+                    sender(player.player_id, 'Тут никому твоё барахло не сдалось!')
+            
                    
             #Админ команды
             # ----------------------------------------------------
